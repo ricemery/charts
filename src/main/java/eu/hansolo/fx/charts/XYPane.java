@@ -42,6 +42,7 @@ import javafx.scene.paint.Paint;
 import javafx.scene.paint.RadialGradient;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
+import javafx.util.StringConverter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,7 +50,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import static eu.hansolo.fx.charts.ChartType.SMOOTH_POLAR;
@@ -101,6 +101,10 @@ public class XYPane<T extends XYItem> extends Region implements ChartArea {
     private              ObjectProperty<Color>          thresholdYColor;
     private              PolarTickStep                  _polarTickStep;
     private              ObjectProperty<PolarTickStep>  polarTickStep;
+    private              StringConverter<Double>        _polarTickConverter;
+    private              ObjectProperty<StringConverter<Double>> polarTickConverter;
+    private              StringConverter<Double>        _boundsConverter;
+    private              ObjectProperty<StringConverter<Double>> boundsConverter;
 
 
     // ******************** Constructors **************************************
@@ -129,6 +133,8 @@ public class XYPane<T extends XYItem> extends Region implements ChartArea {
         _thresholdYVisible = false;
         _thresholdYColor   = Color.RED;
         _polarTickStep     = PolarTickStep.FOURTY_FIVE;
+        _polarTickConverter = new DoubleStringConverter();
+        _boundsConverter    = new DoubleStringConverter();
 
         initGraphics();
         registerListeners();
@@ -385,6 +391,49 @@ public class XYPane<T extends XYItem> extends Region implements ChartArea {
             _polarTickStep = null;
         }
         return polarTickStep;
+    }
+
+    public StringConverter<Double> getPolarTickCoverter() { return null == polarTickConverter ? _polarTickConverter : polarTickConverter.get(); }
+    public void setPolarTickConverter(final StringConverter<Double> stringConverter) {
+        if (null == polarTickConverter) {
+            _polarTickConverter = stringConverter;
+            drawChart();
+        } else {
+            polarTickConverter.set(stringConverter);
+        }
+    }
+    public ObjectProperty<StringConverter<Double>> polarTickConverterProperty() {
+        if (null == polarTickConverter) {
+            polarTickConverter = new ObjectPropertyBase<StringConverter<Double>>() {
+                @Override protected void invalidated() { drawChart(); }
+                @Override public Object getBean() { return XYPane.this; }
+                @Override public String getName() { return "polarTickConverter"; }
+            };
+            _polarTickConverter = null;
+        }
+        return polarTickConverter;
+    }
+
+    //boundsConverter
+    public StringConverter<Double> getBoundsCoverter() { return null == boundsConverter ? _boundsConverter : boundsConverter.get(); }
+    public void setBoundsConverter(final StringConverter<Double> stringConverter) {
+        if (null == boundsConverter) {
+            _boundsConverter = stringConverter;
+            drawChart();
+        } else {
+            boundsConverter.set(stringConverter);
+        }
+    }
+    public ObjectProperty<StringConverter<Double>> boundsConverterProperty() {
+        if (null == boundsConverter) {
+            boundsConverter = new ObjectPropertyBase<StringConverter<Double>>() {
+                @Override protected void invalidated() { drawChart(); }
+                @Override public Object getBean() { return XYPane.this; }
+                @Override public String getName() { return "boundsConverter"; }
+            };
+            _boundsConverter = null;
+        }
+        return boundsConverter;
     }
 
     public boolean containsPolarChart() {
@@ -1027,8 +1076,9 @@ public class XYPane<T extends XYItem> extends Region implements ChartArea {
 
         // draw min and max Text
         Font   font         = Fonts.latoRegular(0.025 * size);
-        String minValueText = String.format(Locale.US, "%.0f", getLowerBoundY());
-        String maxValueText = String.format(Locale.US, "%.0f", getUpperBoundY());
+        final StringConverter<Double> boundsStringConverter = getBoundsCoverter();
+        String minValueText = boundsStringConverter.toString(getLowerBoundY());
+        String maxValueText = boundsStringConverter.toString(getUpperBoundY());
         ctx.save();
         ctx.setFont(font);
         Helper.drawTextWithBackground(ctx, minValueText, font, Color.WHITE, Color.BLACK, CENTER_X, CENTER_Y - size * 0.018);
@@ -1038,8 +1088,9 @@ public class XYPane<T extends XYItem> extends Region implements ChartArea {
         // draw axis text
         ctx.save();
         ctx.setFont(Fonts.latoRegular(0.04 * size));
+        final StringConverter<Double> ticksStringConverter = getPolarTickCoverter();
         for (int i = 0 ; i < NO_OF_SECTORS ; i++) {
-            ctx.fillText(String.format(Locale.US, "%.0f", i * ANGLE_STEP), CENTER_X, size * 0.02);
+            ctx.fillText(ticksStringConverter.toString(i * ANGLE_STEP), CENTER_X, size * 0.02);
             Helper.rotateCtx(ctx, CENTER_X, CENTER_Y, ANGLE_STEP);
         }
         ctx.restore();
